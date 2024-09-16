@@ -11,7 +11,7 @@ pub struct SetupManager<'info> {
        init,
        payer = payer,
        space = Manager::INIT_SPACE,
-       seeds = [MANAGER_SEEDS.as_bytes()],
+       seeds = [b"manager", signer.key().as_ref()],
        bump,
    )]
    pub manager: Account<'info, Manager>,

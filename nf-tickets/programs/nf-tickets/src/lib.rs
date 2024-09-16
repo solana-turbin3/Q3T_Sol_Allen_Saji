@@ -18,6 +18,12 @@ pub mod nf_tickets {
         msg!("Greetings from: {:?}", ctx.program_id);
         Ok(())
     }
+
+    pub fn setup_manager(ctx: Context<SetupManager>) -> Result<()> {
+        ctx.accounts.manager.bump = ctx.bumps.manager;
+    
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
