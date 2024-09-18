@@ -1,21 +1,11 @@
 use anchor_lang::prelude::*;
 use mpl_core::{
     ID as MPL_CORE_ID,
-    fetch_external_plugin_adapter_data_info, 
-    fetch_plugin, 
-    instructions::{
-        CreateCollectionV2CpiBuilder, 
-        CreateV2CpiBuilder, 
-        WriteExternalPluginAdapterDataV1CpiBuilder, 
-        UpdatePluginV1CpiBuilder
-    }, 
-    accounts::{BaseAssetV1, BaseCollectionV1}, 
+    instructions::CreateCollectionV2CpiBuilder,   
     types::{
-        AppDataInitInfo, Attribute, Attributes, 
-        ExternalPluginAdapterInitInfo, ExternalPluginAdapterKey, 
-        ExternalPluginAdapterSchema, PermanentBurnDelegate, UpdateAuthority,
-        PermanentFreezeDelegate, PermanentTransferDelegate, Plugin, 
-        PluginAuthority, PluginAuthorityPair, PluginType
+        Attribute, Attributes, 
+        Plugin, 
+        PluginAuthority, PluginAuthorityPair
     }, 
 };
 
@@ -27,7 +17,7 @@ pub struct CreateEvent<'info> {
    #[account(mut)]
    pub payer: Signer<'info>,
    #[account(
-       seeds = [b"event", signer.key().as_ref()],
+       seeds = [b"manager", signer.key().as_ref()],
        bump = manager.bump
    )]
    pub manager: Account<'info, Manager>,
