@@ -1,5 +1,4 @@
-use anchor_lang::prelude::*;
-
+use anchor_lang::{prelude::*, system_program::{Transfer, transfer}};
 use mpl_core::{
     ID as MPL_CORE_ID,
     fetch_plugin, 
@@ -15,6 +14,7 @@ use mpl_core::{
 };
 
 use crate::states::Manager;
+use crate::states::Platform;
 use crate::errors::TicketError;
 
 #[derive(Accounts)]
@@ -22,11 +22,17 @@ pub struct CreateTicket<'info> {
    pub signer: Signer<'info>,
    #[account(mut)]
    pub payer: Signer<'info>,
+   #[account(mut)]
    #[account(
        seeds = [b"manager", signer.key().as_ref()],
        bump = manager.bump
    )]
    pub manager: Account<'info, Manager>,
+   #[account(
+       seeds = [b"platform", platform.platform_name.as_str().as_bytes()],
+       bump = platform.bump,
+   )]
+   platform: Box<Account<'info, Platform>>,
    #[account(
        mut,
        constraint = event.update_authority == manager.key(),
@@ -34,6 +40,11 @@ pub struct CreateTicket<'info> {
    pub event: Account<'info, BaseCollectionV1>,
    #[account(mut)]
    pub ticket: Signer<'info>,
+   #[account(
+       seeds = [b"treasury", platform.key().as_ref()],
+       bump = platform.treasury_bump,
+   )]
+   treasury: SystemAccount<'info>,
    pub system_program: Program<'info, System>,
    #[account(address = MPL_CORE_ID)]
    /// CHECK: This is checked by the address constraint
@@ -76,42 +87,63 @@ impl <'info> CreateTicket<'info> {
             ctx.accounts.event.num_minted < capacity, 
             TicketError::MaximumTicketsReached
         );
-    
+
+        let price_attribute = collection_attribute_list
+            .attribute_list
+            .iter()
+            .find(|attr| attr.key == "Price")
+            .ok_or(TicketError::MissingAttribute)?;
+
+        let price = price_attribute
+            .value
+            .parse::<u64>()
+            .map_err(|_| TicketError::NumericalOverflow)?;
+
+        // Transfer funds from buyer to platform treasury using Anchor's transfer
+        let transfer_cpi = Transfer {
+            from: ctx.accounts.payer.to_account_info(),
+            to: ctx.accounts.treasury.to_account_info(),
+        };
+
+        transfer(CpiContext::new(ctx.accounts.system_program.to_account_info(), transfer_cpi), price)?;
+
         // Add an Attribute Plugin that will hold the ticket details
         let mut ticket_plugin: Vec<PluginAuthorityPair> = vec![];
         
         let mut attribute_list: Vec<Attribute> = vec![
-        Attribute { 
-            key: "Ticket Number".to_string(), 
-            value: ctx.accounts.event.num_minted.checked_add(1).ok_or(TicketError::NumericalOverflow)?.to_string()
-        },
-         
-        Attribute { 
-            key: "Price".to_string(), 
-            value: args.price.to_string() 
-        }
+            Attribute { 
+                key: "Ticket Number".to_string(), 
+                value: ctx.accounts.event.num_minted.checked_add(1).ok_or(TicketError::NumericalOverflow)?.to_string()
+            },
+            Attribute { 
+                key: "Price".to_string(), 
+                value: args.price.to_string() 
+            }
         ];
+        
         // Add Row attribute if provided
-    if let Some(row) = args.row {
-        attribute_list.push(Attribute {
-            key: "Row".to_string(),
-            value: row,
-        });
-    }
+        if let Some(row) = args.row {
+            attribute_list.push(Attribute {
+                key: "Row".to_string(),
+                value: row,
+            });
+        }
+
         // Add Seat attribute if provided
-    if let Some(seat) = args.seat {
-        attribute_list.push(Attribute {
-            key: "Seat".to_string(),
-            value: seat,
-        });
-    }
-    // Add screen attribute if provided
-    if let Some(screen) = args.screen {
-        attribute_list.push(Attribute {
-            key: "Screen".to_string(),
-            value: screen,
-        });
-    }
+        if let Some(seat) = args.seat {
+            attribute_list.push(Attribute {
+                key: "Seat".to_string(),
+                value: seat,
+            });
+        }
+
+        // Add Screen attribute if provided
+        if let Some(screen) = args.screen {
+            attribute_list.push(Attribute {
+                key: "Screen".to_string(),
+                value: screen,
+            });
+        }
         
         ticket_plugin.push(
             PluginAuthorityPair { 
@@ -121,19 +153,18 @@ impl <'info> CreateTicket<'info> {
         );
 
         let is_ticket_transferable = collection_attribute_list
-    .attribute_list
-    .iter()
-    .find(|attr| attr.key == "IsTicketTransferable")
-    .map(|attr| attr.value.to_lowercase() == "true")
-    .unwrap_or(false);
+            .attribute_list
+            .iter()
+            .find(|attr| attr.key == "IsTicketTransferable")
+            .map(|attr| attr.value.to_lowercase() == "true")
+            .unwrap_or(false);
         
-    ticket_plugin.push(
-        PluginAuthorityPair { 
-            plugin: Plugin::PermanentFreezeDelegate(PermanentFreezeDelegate { frozen: !is_ticket_transferable }), 
-            authority: Some(PluginAuthority::UpdateAuthority) 
-        }
-    );
-        
+        ticket_plugin.push(
+            PluginAuthorityPair { 
+                plugin: Plugin::PermanentFreezeDelegate(PermanentFreezeDelegate { frozen: !is_ticket_transferable }), 
+                authority: Some(PluginAuthority::UpdateAuthority) 
+            }
+        );
         
         ticket_plugin.push(
             PluginAuthorityPair { 
@@ -163,17 +194,17 @@ impl <'info> CreateTicket<'info> {
     
         // Create the Ticket
         CreateV2CpiBuilder::new(&ctx.accounts.mpl_core_program.to_account_info())
-        .asset(&ctx.accounts.ticket.to_account_info())
-        .collection(Some(&ctx.accounts.event.to_account_info()))
-        .payer(&ctx.accounts.payer.to_account_info())
-        .authority(Some(&ctx.accounts.manager.to_account_info()))
-        .owner(Some(&ctx.accounts.signer.to_account_info()))
-        .system_program(&ctx.accounts.system_program.to_account_info())
-        .name(args.name)
-        .uri(args.uri)
-        .plugins(ticket_plugin)
-        .external_plugin_adapters(ticket_external_plugin)
-        .invoke_signed(&[signer_seeds])?;
+            .asset(&ctx.accounts.ticket.to_account_info())
+            .collection(Some(&ctx.accounts.event.to_account_info()))
+            .payer(&ctx.accounts.payer.to_account_info())
+            .authority(Some(&ctx.accounts.manager.to_account_info()))
+            .owner(Some(&ctx.accounts.signer.to_account_info()))
+            .system_program(&ctx.accounts.system_program.to_account_info())
+            .name(args.name)
+            .uri(args.uri)
+            .plugins(ticket_plugin)
+            .external_plugin_adapters(ticket_external_plugin)
+            .invoke_signed(&[signer_seeds])?;
     
         Ok(())
     }
