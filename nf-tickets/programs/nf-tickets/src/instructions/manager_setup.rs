@@ -18,10 +18,3 @@ pub struct SetupManager<'info> {
    pub system_program: Program<'info, System>,
 }
 
-impl <'info> SetupManager<'info> {
-pub fn setup_manager(ctx: Context<SetupManager>) -> Result<()> {
-    ctx.accounts.manager.bump = ctx.bumps.manager;
-
-    Ok(())
-    }
-}
