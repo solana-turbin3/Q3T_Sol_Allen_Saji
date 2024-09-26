@@ -37,4 +37,8 @@ pub enum TicketError {
 
     #[msg("Ticket not found")]
     TicketNotFound,
+
+    #[msg("Ticket already scanned")]
+    TicketAlreadyScanned,
+
 }
