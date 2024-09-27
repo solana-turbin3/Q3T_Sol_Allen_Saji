@@ -7,11 +7,11 @@ skip-lint = false
 [programs.localnet]
 nf_tickets = "FiTx6nFmuJnP7AX63RrXHWKZRDZL6FYTDFX1EQ61Ajvz"
 
-[programs.devnet]
-nf_tickets = "FiTx6nFmuJnP7AX63RrXHWKZRDZL6FYTDFX1EQ61Ajvz"
+# [programs.devnet]
+# nf_tickets = "FiTx6nFmuJnP7AX63RrXHWKZRDZL6FYTDFX1EQ61Ajvz"
 
-[programs.mainnet]
-nf_tickets = "FiTx6nFmuJnP7AX63RrXHWKZRDZL6FYTDFX1EQ61Ajvz"
+# [programs.mainnet]
+# nf_tickets = "FiTx6nFmuJnP7AX63RrXHWKZRDZL6FYTDFX1EQ61Ajvz"
 
 [registry]
 url = "https://api.apr.dev"
