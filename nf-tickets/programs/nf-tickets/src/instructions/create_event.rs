@@ -31,7 +31,7 @@ pub struct CreateEventArgs {
    pub artist: String,
    pub date: String,
    pub time: String,
-   pub capacity: u64,
+   pub capacity: u32,
    pub is_ticket_transferable: bool
 }
 
