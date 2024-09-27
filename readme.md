@@ -1,6 +1,7 @@
 This repository contains all my work done during Q3 Turbine Solana Builders Cohort.
 
-# NFT Ticketing Platform (NFTickets)
+# Capstone Project
+## NFT Ticketing Platform (NFTickets)
 
 ### Devnet Deployed Address: `DUe3UGUaWHrh1Aq9Vs6fbbdFFDA4uMKXsb2NWs7cd3Mh`
 
