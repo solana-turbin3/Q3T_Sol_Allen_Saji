@@ -113,7 +113,7 @@ pub mod nf_tickets {
             .attribute_list
             .iter()
             .find(|attr| attr.key == "Capacity")
-            .ok_or(TicketError::MissingAttribute)?;
+            .ok_or(TicketError::MissingCapacityAttribute)?;
     
         // Unwrap the Capacity attribute value
         let capacity = capacity_attribute
@@ -126,22 +126,15 @@ pub mod nf_tickets {
             TicketError::MaximumTicketsReached
         );
 
-        let price_attribute = collection_attribute_list
-            .attribute_list
-            .iter()
-            .find(|attr| attr.key == "Price")
-            .ok_or(TicketError::MissingAttribute)?;
-
-        let price = price_attribute
-            .value
-            .parse::<u64>()
-            .map_err(|_| TicketError::NumericalOverflow)?;
+        let price = args.price;
 
         // Transfer funds from buyer to platform treasury using Anchor's transfer
         let transfer_cpi = Transfer {
             from: ctx.accounts.payer.to_account_info(),
             to: ctx.accounts.treasury.to_account_info(),
         };
+
+        msg!("We are here, before funds transfer ");
 
         transfer(CpiContext::new(ctx.accounts.system_program.to_account_info(), transfer_cpi), price)?;
 
@@ -227,6 +220,8 @@ pub mod nf_tickets {
                 schema: Some(ExternalPluginAdapterSchema::Binary),
             }
         ));
+
+        msg!("We are here, before ticket creation");
     
         let signer_seeds = &[b"manager".as_ref(), &[ctx.accounts.manager.bump]];
     
