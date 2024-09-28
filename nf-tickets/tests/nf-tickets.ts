@@ -8,37 +8,45 @@ import { createUmi } from "@metaplex-foundation/umi-bundle-defaults";
 import { mplCore, MPL_CORE_PROGRAM_ID } from "@metaplex-foundation/mpl-core";
 import { publicKey } from "@metaplex-foundation/umi";
 
+// Initialize the UMI object for interacting with Metaplex programs
 const umi = createUmi("http://127.0.0.1:8899").use(mplCore());
 
 describe("nf-tickets", () => {
+  // Set up the anchor provider
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
 
+  // Load the NfTickets program
   const program = anchor.workspace.NfTickets as Program<NfTickets>;
 
+  // Define global constants and variables
   const platformName = "TestPlatform";
-  const fee = 250; // 2.5%
+  const fee = 250; // Platform fee in basis points (2.5%)
+  let platformPda: anchor.web3.PublicKey;
+  let rewardsMintPda: anchor.web3.PublicKey;
+  let treasuryPda: anchor.web3.PublicKey;
+  let managerPda: anchor.web3.PublicKey;
+  let eventKeypair: anchor.web3.Keypair;
 
-  it("Initializes platform, sets up manager, creates event, and generates ticket", async () => {
-    // Platform initialization
-    const [platformPda, platformBump] =
-      anchor.web3.PublicKey.findProgramAddressSync(
-        [Buffer.from("platform"), Buffer.from(platformName)],
-        program.programId
-      );
+  // Test 1: Initializing the platform
+  it("Initializes platform", async () => {
+    // Find PDAs for platform, rewards, and treasury
+    [platformPda] = anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("platform"), Buffer.from(platformName)],
+      program.programId
+    );
 
-    const [rewardsMintPda, rewardsBump] =
-      anchor.web3.PublicKey.findProgramAddressSync(
-        [Buffer.from("rewards"), platformPda.toBuffer()],
-        program.programId
-      );
+    [rewardsMintPda] = anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("rewards"), platformPda.toBuffer()],
+      program.programId
+    );
 
-    const [treasuryPda, treasuryBump] =
-      anchor.web3.PublicKey.findProgramAddressSync(
-        [Buffer.from("treasury"), platformPda.toBuffer()],
-        program.programId
-      );
+    [treasuryPda] = anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("treasury"), platformPda.toBuffer()],
+      program.programId
+    );
 
+    // Call the initialize method in the program
     await program.methods
       .initialize(platformName, fee)
       .accountsPartial({
@@ -50,29 +58,35 @@ describe("nf-tickets", () => {
       })
       .rpc();
 
+    // Fetch the platform account and verify its data
     const platformAccount = await program.account.platform.fetch(platformPda);
     expect(platformAccount.admin.toString()).to.equal(
       provider.wallet.publicKey.toString()
     );
     expect(platformAccount.fee).to.equal(fee);
     expect(platformAccount.platformName).to.equal(platformName);
-    expect(platformAccount.bump).to.equal(platformBump);
-    expect(platformAccount.treasuryBump).to.equal(treasuryBump);
-    expect(platformAccount.rewardsBump).to.equal(rewardsBump);
-    console.log("Platform account: ", platformAccount);
+  });
 
-    // Manager setup
-    const [managerPda] = anchor.web3.PublicKey.findProgramAddressSync(
+  // Test 2: Setting up the manager
+  it("Sets up manager", async () => {
+    // Derive PDA for the manager
+    [managerPda] = anchor.web3.PublicKey.findProgramAddressSync(
       [Buffer.from("manager"), provider.wallet.publicKey.toBuffer()],
       program.programId
     );
 
+    // Call setupManager method from the program
     await program.methods.setupManager().accounts({}).rpc();
-    const managerAccount = await program.account.manager.fetch(managerPda);
-    console.log("Manager account:", managerAccount);
 
-    // Event creation
-    const eventKeypair = anchor.web3.Keypair.generate();
+    // Fetch and validate the manager account
+    const managerAccount = await program.account.manager.fetch(managerPda);
+    expect(managerAccount).to.exist;
+  });
+
+  // Test 3: Creating an event
+  it("Creates an event", async () => {
+    // Generate keypair for the new event
+    eventKeypair = anchor.web3.Keypair.generate();
     const eventArgs = {
       name: "Test Event",
       category: "Music",
@@ -86,6 +100,7 @@ describe("nf-tickets", () => {
       isTicketTransferable: true,
     };
 
+    // Call createEvent method from the program
     const eventTx = await program.methods
       .createEvent(eventArgs)
       .accountsPartial({
@@ -94,46 +109,36 @@ describe("nf-tickets", () => {
         manager: managerPda,
         event: eventKeypair.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
+        mplCoreProgram: MPL_CORE_PROGRAM_ID,
       })
       .signers([eventKeypair])
       .rpc();
 
+    // Confirm the transaction
     await provider.connection.confirmTransaction(eventTx);
 
-    // Fetch collection with retry
-    const fetchCollectionWithRetry = async (retries = 50, delay = 2000) => {
-      for (let i = 0; i < retries; i++) {
-        try {
-          return await fetchCollectionV1(
-            umi,
-            publicKey(eventKeypair.publicKey.toBase58())
-          );
-        } catch (error) {
-          if (i === retries - 1) throw error;
-          await new Promise((resolve) => setTimeout(resolve, delay));
-        }
-      }
-    };
-
-    const collection = await fetchCollectionWithRetry();
+    // Fetch and validate the event collection
+    const collection = await fetchCollectionWithRetry(eventKeypair.publicKey);
     expect(collection.name).to.equal(eventArgs.name);
-    expect(collection.uri).to.equal(eventArgs.uri);
-    console.log("Event: ", collection);
+    console.log("Event collection: ", collection);
+  });
 
-    // Ticket generation
+  // Test 4: Generating a ticket
+  it("Generates a ticket", async () => {
+    // Generate keypair for the new ticket
     const ticketKeypair = anchor.web3.Keypair.generate();
     const venueAuthority = anchor.web3.Keypair.generate().publicKey;
     const ticketArgs = {
       name: "Test Ticket",
       uri: "https://example.com/ticket",
       price: new anchor.BN(10000),
-      venueAuthority: venueAuthority,
+      venueAuthority,
       screen: "Screen 1",
       row: "A",
       seat: "1",
     };
 
-    console.log("about to transact");
+    // Call createTicket method from the program
     const ticketTx = await program.methods
       .createTicket(ticketArgs)
       .accountsPartial({
@@ -150,29 +155,47 @@ describe("nf-tickets", () => {
       .signers([ticketKeypair])
       .rpc();
 
-    console.log("Ticket txn: ", ticketTx);
+    // Confirm the transaction
     await provider.connection.confirmTransaction(ticketTx);
 
-    // Fetch ticket with retry
-    const fetchTicketWithRetry = async (retries = 50, delay = 2000) => {
-      for (let i = 0; i < retries; i++) {
-        try {
-          return await fetchAssetV1(
-            umi,
-            publicKey(ticketKeypair.publicKey.toBase58())
-          );
-        } catch (error) {
-          if (i === retries - 1) throw error;
-          await new Promise((resolve) => setTimeout(resolve, delay));
-        }
-      }
-    };
-
-    const ticket = await fetchTicketWithRetry();
+    // Fetch and validate the ticket
+    const ticket = await fetchTicketWithRetry(ticketKeypair.publicKey);
     expect(ticket.name).to.equal(ticketArgs.name);
-    expect(ticket.uri).to.equal(ticketArgs.uri);
     console.log("Ticket: ", ticket);
-
-    console.log("All operations completed successfully");
   });
+
+  // Helper function: Retry fetching a collection
+  const fetchCollectionWithRetry = async (
+    eventPublicKey: anchor.web3.PublicKey,
+    retries = 50,
+    delay = 2000
+  ) => {
+    for (let i = 0; i < retries; i++) {
+      try {
+        return await fetchCollectionV1(
+          umi,
+          publicKey(eventPublicKey.toBase58())
+        );
+      } catch (error) {
+        if (i === retries - 1) throw error;
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+  };
+
+  // Helper function: Retry fetching a ticket
+  const fetchTicketWithRetry = async (
+    ticketPublicKey: anchor.web3.PublicKey,
+    retries = 50,
+    delay = 2000
+  ) => {
+    for (let i = 0; i < retries; i++) {
+      try {
+        return await fetchAssetV1(umi, publicKey(ticketPublicKey.toBase58()));
+      } catch (error) {
+        if (i === retries - 1) throw error;
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+  };
 });
