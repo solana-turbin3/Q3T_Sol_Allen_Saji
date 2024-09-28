@@ -14,8 +14,8 @@ pub enum TicketError {
     #[msg("Numerical overflow occurred")]
     NumericalOverflow,
 
-    #[msg("Required attribute is missing")]
-    MissingAttribute,
+    #[msg("Required ticket attribute is missing")]
+    MissingCapacityAttribute,
 
     #[msg("Invalid ticket price")]
     InvalidPrice,
