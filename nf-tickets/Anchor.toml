@@ -14,8 +14,8 @@ address = "CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d"
 nf_tickets = "FiTx6nFmuJnP7AX63RrXHWKZRDZL6FYTDFX1EQ61Ajvz"
 
 
-# [programs.devnet]
-# nf_tickets = "FiTx6nFmuJnP7AX63RrXHWKZRDZL6FYTDFX1EQ61Ajvz"
+[programs.devnet]
+nf_tickets = "FiTx6nFmuJnP7AX63RrXHWKZRDZL6FYTDFX1EQ61Ajvz"
 
 # [programs.mainnet]
 # nf_tickets = "FiTx6nFmuJnP7AX63RrXHWKZRDZL6FYTDFX1EQ61Ajvz"
@@ -24,6 +24,7 @@ nf_tickets = "FiTx6nFmuJnP7AX63RrXHWKZRDZL6FYTDFX1EQ61Ajvz"
 url = "https://api.apr.dev"
 
 [provider]
+# cluster = "Devnet"
 cluster = "Localnet"
 wallet = "~/.config/solana/id.json"
 
