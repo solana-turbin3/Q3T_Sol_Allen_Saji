@@ -26,7 +26,9 @@ pub struct Initialize<'info> {
         mint::authority = platform,
     )]
     rewards_mint: Box<InterfaceAccount<'info, Mint>>,
+    
     #[account(
+        mut,
         seeds = [b"treasury", platform.key().as_ref()],
         bump,
     )]

@@ -31,6 +31,7 @@ pub struct CreateTicket<'info> {
    #[account(mut)]
    pub ticket: Signer<'info>,
    #[account(
+    mut,
        seeds = [b"treasury", platform.key().as_ref()],
        bump = platform.treasury_bump,
    )]
