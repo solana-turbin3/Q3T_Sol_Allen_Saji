@@ -4,6 +4,8 @@
 resolution = true
 skip-lint = false
 
+[test]
+startup_wait = 20000
 
 [test.validator]
 url = "https://api.mainnet-beta.solana.com"
