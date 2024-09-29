@@ -123,6 +123,7 @@ describe("nf-tickets", () => {
     console.log("Event collection: ", collection);
   });
 
+  // Test 4: Generating a ticket
   it("Generates a ticket", async () => {
     // Generate keypair for the new ticket
     const ticketKeypair = anchor.web3.Keypair.generate();
@@ -138,47 +139,32 @@ describe("nf-tickets", () => {
       seat: "1",
     };
 
-    try {
-      const ticketTx = await program.methods
-        .createTicket(ticketArgs)
-        .accountsPartial({
-          signer: provider.wallet.publicKey,
-          payer: provider.wallet.publicKey,
-          manager: managerPda,
-          platform: platformPda,
-          event: eventKeypair.publicKey,
-          ticket: ticketKeypair.publicKey,
-          treasury: treasuryPda,
-          systemProgram: anchor.web3.SystemProgram.programId,
-          mplCoreProgram: MPL_CORE_PROGRAM_ID,
-        })
-        .signers([ticketKeypair])
-        .rpc();
+    // Call createTicket method from the program
+    const ticketTx = await program.methods
+      .createTicket(ticketArgs)
+      .accountsPartial({
+        signer: provider.wallet.publicKey,
+        payer: provider.wallet.publicKey,
+        manager: managerPda,
+        platform: platformPda,
+        event: eventKeypair.publicKey,
+        ticket: ticketKeypair.publicKey,
+        treasury: treasuryPda,
+        systemProgram: anchor.web3.SystemProgram.programId,
+        mplCoreProgram: MPL_CORE_PROGRAM_ID,
+      })
+      .signers([ticketKeypair])
+      .rpc();
 
-      console.log("Transaction sent. Waiting for confirmation...");
-      console.log("Transaction signature:", ticketTx);
+    // Confirm the transaction
+    await provider.connection.confirmTransaction(ticketTx);
 
-      // Confirm the transaction
-      await provider.connection.confirmTransaction(ticketTx);
-
-      console.log("Transaction confirmed. Fetching ticket...");
-
-      // Fetch and validate the ticket
-      const ticket = await fetchTicketWithRetry(ticketKeypair.publicKey);
-      expect(ticket.name).to.equal(ticketArgs.name);
-      console.log("Ticket created successfully:", ticket);
-    } catch (error) {
-      console.error("Error creating ticket:", error);
-      if (error instanceof anchor.AnchorError) {
-        console.error("Error code:", error.error.errorCode.code);
-        console.error("Error message:", error.error.errorMessage);
-        console.error("Error logs:", error.logs);
-      } else {
-        console.error("Unexpected error:", error);
-      }
-      throw error;
-    }
+    // Fetch and validate the ticket
+    const ticket = await fetchTicketWithRetry(ticketKeypair.publicKey);
+    expect(ticket.name).to.equal(ticketArgs.name);
+    console.log("Ticket: ", ticket);
   });
+
   // Helper function: Retry fetching a collection
   const fetchCollectionWithRetry = async (
     eventPublicKey: anchor.web3.PublicKey,
