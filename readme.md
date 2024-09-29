@@ -14,7 +14,6 @@ The NFT Ticketing Platform is a decentralized solution aimed at revolutionizing 
 
 1. **Artist Customization**: Artists can customize how their tickets are sold by setting parameters like:
    - Transferability options
-   - Bidding for premium tickets
    - Resale restrictions (time frames, royalties, etc.)
 2. **Admin Control**: Admins approve events and ensure compliance, as well as manage platform policies.
 
