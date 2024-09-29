@@ -1,6 +1,6 @@
 use anchor_lang::{prelude::*, system_program::{Transfer, transfer}};
 
-declare_id!("FiTx6nFmuJnP7AX63RrXHWKZRDZL6FYTDFX1EQ61Ajvz");
+declare_id!("GnhtsucQHm8nTuffAK4SiQ74xvA9AGqQk34vrcp1W3ES");
 
 use mpl_core::{
     fetch_external_plugin_adapter_data_info, 

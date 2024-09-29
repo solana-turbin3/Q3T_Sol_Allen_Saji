@@ -1,9 +1,10 @@
 This repository contains all my work done during Q3 Turbine Solana Builders Cohort.
 
 # Capstone Project
+
 ## NFT Ticketing Platform (NFTickets)
 
-### Devnet Deployed Address: `DUe3UGUaWHrh1Aq9Vs6fbbdFFDA4uMKXsb2NWs7cd3Mh`
+### Devnet Deployed Address: `5qCfMhUmbJmau9SGHP1qAEMfKwEzyyyQ846SMXX2y6w`
 
 ## Project Overview
 
@@ -15,10 +16,10 @@ The NFT Ticketing Platform is a decentralized solution aimed at revolutionizing 
    - Transferability options
    - Bidding for premium tickets
    - Resale restrictions (time frames, royalties, etc.)
-   
 2. **Admin Control**: Admins approve events and ensure compliance, as well as manage platform policies.
 
-3. **User Experience**: 
+3. **User Experience**:
+
    - Users can purchase, sell, and bid on NFT tickets securely.
    - NFT tickets serve as proof of entry, stored in digital wallets.
 
@@ -39,23 +40,26 @@ The NFT Ticketing Platform is a decentralized solution aimed at revolutionizing 
 - **Platform PDA**: Contains platform-specific details such as admin, reward mint authority, and platform name.
 - **Event PDA**: Created when a new event is listed, storing event-specific data (capacity, pricing, custom settings).
 - **Ticket PDA**: Lazy minted on user purchase, associated with seating and other ticket information.
-  
+
 ### Setting Up the Project
 
-1. **Initialize the Platform**: 
+1. **Initialize the Platform**:
+
    - The platform is initialized with an admin account and sets up a reward token mint.
    - The platform itself acts as the mint authority for all token-related activities.
 
 2. **Event Creation**:
+
    - Artists create an event with customizable settings such as bidding and seating.
    - Events are verified and approved by the admin.
 
 3. **Lazy Minting**:
+
    - Tickets are minted only when a user purchases them, saving on transaction costs and storage.
    - Upon ticket minting, associated reward tokens are sent to the buyer’s wallet.
 
 4. **Reward System**:
-   - Users are rewarded platform tokens on each ticket purchase. 
+   - Users are rewarded platform tokens on each ticket purchase.
    - The platform handles token minting and distribution through the event's PDA.
 
 ### How to Contribute
@@ -64,4 +68,4 @@ The NFT Ticketing Platform is a decentralized solution aimed at revolutionizing 
    ```bash
    git clone <repo-url>
    cd nft-ticketing-platform
-
+   ```
