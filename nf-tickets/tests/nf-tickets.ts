@@ -27,6 +27,8 @@ describe("nf-tickets", () => {
   let treasuryPda: anchor.web3.PublicKey;
   let managerPda: anchor.web3.PublicKey;
   let eventKeypair: anchor.web3.Keypair;
+  let ticketKeypair: anchor.web3.Keypair;
+  let venueAuthority = anchor.web3.Keypair.generate().publicKey;
 
   // Test 1: Initializing the platform
   it("Initializes platform", async () => {
@@ -45,6 +47,22 @@ describe("nf-tickets", () => {
       [Buffer.from("treasury"), platformPda.toBuffer()],
       program.programId
     );
+
+    // Fetch the minimum SOL required for rent exemption
+    const lamportsForRentExemption =
+      await provider.connection.getMinimumBalanceForRentExemption(0); // No data space for treasury, only lamports
+
+    // Fund the treasury PDA with the minimum rent-exempt amount
+    const transaction = new anchor.web3.Transaction().add(
+      anchor.web3.SystemProgram.transfer({
+        fromPubkey: provider.wallet.publicKey,
+        toPubkey: treasuryPda,
+        lamports: lamportsForRentExemption,
+      })
+    );
+
+    // Send the transaction to make the PDA rent-exempt
+    await provider.sendAndConfirm(transaction);
 
     // Call the initialize method in the program
     await program.methods
@@ -120,14 +138,12 @@ describe("nf-tickets", () => {
     // Fetch and validate the event collection
     const collection = await fetchCollectionWithRetry(eventKeypair.publicKey);
     expect(collection.name).to.equal(eventArgs.name);
-    console.log("Event collection: ", collection);
   });
 
   // Test 4: Generating a ticket
   it("Generates a ticket", async () => {
     // Generate keypair for the new ticket
-    const ticketKeypair = anchor.web3.Keypair.generate();
-    const venueAuthority = anchor.web3.Keypair.generate().publicKey;
+    ticketKeypair = anchor.web3.Keypair.generate();
 
     const ticketArgs = {
       name: "Test Ticket",
@@ -162,7 +178,51 @@ describe("nf-tickets", () => {
     // Fetch and validate the ticket
     const ticket = await fetchTicketWithRetry(ticketKeypair.publicKey);
     expect(ticket.name).to.equal(ticketArgs.name);
-    console.log("Ticket: ", ticket);
+  });
+
+  // Test case: Withdraw funds from treasury
+  it("Withdraws funds from treasury", async () => {
+    // Fetch the minimum SOL required for rent exemption
+    const lamportsForRentExemption =
+      await provider.connection.getMinimumBalanceForRentExemption(200); // No data space for treasury, only lamports
+
+    // Fund the treasury PDA with the minimum rent-exempt amount
+    const transaction = new anchor.web3.Transaction().add(
+      anchor.web3.SystemProgram.transfer({
+        fromPubkey: provider.wallet.publicKey,
+        toPubkey: treasuryPda,
+        lamports: lamportsForRentExemption,
+      })
+    );
+
+    // Send the transaction to make the PDA rent-exempt
+    await provider.sendAndConfirm(transaction);
+
+    let amountToWithdraw = new anchor.BN(10000);
+
+    // Fetch admin's initial balance
+    const initialAdminBalance = await provider.connection.getBalance(
+      provider.wallet.publicKey
+    );
+
+    // Call withdraw_from_treasury method from the program
+    await program.methods
+      .withdrawFromTreasury(amountToWithdraw)
+      .accounts({
+        admin: provider.wallet.publicKey,
+        platform: platformPda,
+        treasury: treasuryPda,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .rpc();
+
+    // Fetch admin's balance after withdrawal
+    const finalAdminBalance = await provider.connection.getBalance(
+      provider.wallet.publicKey
+    );
+
+    // Check that the balance has increased by the correct amount
+    expect(finalAdminBalance).to.be.greaterThan(initialAdminBalance);
   });
 
   // Helper function: Retry fetching a collection
