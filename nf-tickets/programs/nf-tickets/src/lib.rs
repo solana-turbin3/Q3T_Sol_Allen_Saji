@@ -134,8 +134,6 @@ pub mod nf_tickets {
             to: ctx.accounts.treasury.to_account_info(),
         };
 
-        msg!("We are here, before funds transfer ");
-
         transfer(CpiContext::new(ctx.accounts.system_program.to_account_info(), transfer_cpi), price)?;
 
         // Add an Attribute Plugin that will hold the ticket details
@@ -220,8 +218,6 @@ pub mod nf_tickets {
                 schema: Some(ExternalPluginAdapterSchema::Binary),
             }
         ));
-
-        msg!("We are here, before ticket creation");
     
         let signer_key = ctx.accounts.signer.key();
     
@@ -272,9 +268,13 @@ pub mod nf_tickets {
             .key(ExternalPluginAdapterKey::AppData(PluginAuthority::Address { address: ctx.accounts.signer.key() }))
             .data(data)
             .invoke()?;
-    
-        // Prepare signer seeds for the next operation
-        let signer_seeds = &[b"manager".as_ref(), &[ctx.accounts.manager.bump]];
+
+            let signer_key = ctx.accounts.signer.key();
+            let signer_seeds = &[
+                b"manager",
+                signer_key.as_ref(),
+                &[ctx.accounts.manager.bump]
+            ];
     
         // Update the plugin to freeze the ticket
         UpdatePluginV1CpiBuilder::new(&ctx.accounts.mpl_core_program.to_account_info())
