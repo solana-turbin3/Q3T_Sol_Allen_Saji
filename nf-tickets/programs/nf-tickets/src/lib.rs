@@ -223,7 +223,13 @@ pub mod nf_tickets {
 
         msg!("We are here, before ticket creation");
     
-        let signer_seeds = &[b"manager".as_ref(), &[ctx.accounts.manager.bump]];
+        let signer_key = ctx.accounts.signer.key();
+    
+        let signer_seeds = &[
+            b"manager",
+            signer_key.as_ref(),
+            &[ctx.accounts.manager.bump]
+        ];
     
         // Create the Ticket
         CreateV2CpiBuilder::new(&ctx.accounts.mpl_core_program.to_account_info())
