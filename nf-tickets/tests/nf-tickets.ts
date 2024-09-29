@@ -124,34 +124,9 @@ describe("nf-tickets", () => {
   });
 
   it("Generates a ticket", async () => {
-    console.log("Starting ticket generation test");
-
     // Generate keypair for the new ticket
     const ticketKeypair = anchor.web3.Keypair.generate();
     const venueAuthority = anchor.web3.Keypair.generate().publicKey;
-
-    console.log("Ticket keypair:", ticketKeypair.publicKey.toBase58());
-    console.log("Venue authority:", venueAuthority.toBase58());
-
-    // Ensure the payer has enough SOL
-    const payerBalance = await provider.connection.getBalance(
-      provider.wallet.publicKey
-    );
-    console.log("Payer balance before airdrop:", payerBalance);
-
-    if (payerBalance < 2 * anchor.web3.LAMPORTS_PER_SOL) {
-      const airdropSignature = await provider.connection.requestAirdrop(
-        provider.wallet.publicKey,
-        2 * anchor.web3.LAMPORTS_PER_SOL
-      );
-      await provider.connection.confirmTransaction(airdropSignature);
-      console.log("Airdrop completed");
-    }
-
-    const newPayerBalance = await provider.connection.getBalance(
-      provider.wallet.publicKey
-    );
-    console.log("Payer balance after airdrop:", newPayerBalance);
 
     const ticketArgs = {
       name: "Test Ticket",
@@ -163,22 +138,7 @@ describe("nf-tickets", () => {
       seat: "1",
     };
 
-    console.log("Ticket arguments:", ticketArgs);
-
     try {
-      console.log("Preparing to call createTicket method");
-
-      // Log all account public keys
-      console.log("Account public keys:");
-      console.log("Signer:", provider.wallet.publicKey.toBase58());
-      console.log("Payer:", provider.wallet.publicKey.toBase58());
-      console.log("Manager:", managerPda.toBase58());
-      console.log("Platform:", platformPda.toBase58());
-      console.log("Event:", eventKeypair.publicKey.toBase58());
-      console.log("Ticket:", ticketKeypair.publicKey.toBase58());
-      console.log("Treasury:", treasuryPda.toBase58());
-      console.log("MPL Core Program:", MPL_CORE_PROGRAM_ID);
-
       const ticketTx = await program.methods
         .createTicket(ticketArgs)
         .accountsPartial({
